@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>All genres</title>
+</head>
+<body>
+
+<div th:each="genre : ${genres}">
+    <a th:href="@{/genres/{id}(id=${genre.getId()})}" th:text="${genre.getGenre()}">genre</a>
+</div>
+
+<br>
+
+<hr/>
+
+<a href="/genres/create">Create new genre</a>
+
+</body>
+</html>

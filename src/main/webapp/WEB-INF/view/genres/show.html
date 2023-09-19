@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Genre</title>
+</head>
+<body>
+<p th:text="${genre.getGenre()}">VALUE</p>
+<p th:text="${genre.getId()}">VALUE</p>
+<br>
+<a th:href="@{/genres/{id}/edit(id=${genre.getId()})}">Update genre</a>
+<br>
+<br>
+<a th:href="@{/genres/{id}/movies(id=${genre.getId()})}">Find movies by this genre</a>
+<br>
+<br>
+<form th:method="DELETE" th.action="@{/genres/{id}(id=${genre.getId()})}">
+    <input type="submit" value="Delete genre">
+</form>
+<br>
+<br>
+
+</body>
+</html>
