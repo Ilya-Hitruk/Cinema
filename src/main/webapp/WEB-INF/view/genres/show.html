@@ -5,7 +5,7 @@
     <title>Genre</title>
 </head>
 <body>
-<p th:text="${genre.getGenre()}">VALUE</p>
+<p th:text="${genre.getTitle()}">VALUE</p>
 <p th:text="${genre.getId()}">VALUE</p>
 <br>
 <a th:href="@{/genres/{id}/edit(id=${genre.getId()})}">Update genre</a>

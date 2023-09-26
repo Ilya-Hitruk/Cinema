@@ -7,5 +7,9 @@ import lombok.*;
 public class GenresEntity {
     private Integer id;
     @NonNull
-    private String genre;
+    private String title;
+
+    public GenresEntity(@NonNull String title) {
+        this.title = title;
+    }
 }

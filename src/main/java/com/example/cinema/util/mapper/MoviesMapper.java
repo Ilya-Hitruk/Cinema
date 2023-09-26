@@ -1,11 +1,13 @@
-package com.example.cinema.util.converter;
+package com.example.cinema.util.mapper;
 
 import com.example.cinema.model.dto.MoviesDto;
 import com.example.cinema.model.entity.MoviesEntity;
+import org.springframework.stereotype.Component;
 
+@Component
 public class MoviesMapper {
 
-    public static MoviesDto entityToDto(MoviesEntity moviesEntity) {
+    public MoviesDto entityToDto(MoviesEntity moviesEntity) {
         return new MoviesDto(
                 moviesEntity.getId(),
                 moviesEntity.getTitle(),
@@ -17,7 +19,7 @@ public class MoviesMapper {
         );
     }
 
-    public static MoviesEntity dtoToEntity(MoviesDto moviesDto) {
+    public MoviesEntity dtoToEntity(MoviesDto moviesDto) {
         return new MoviesEntity(
                 moviesDto.getId(),
                 moviesDto.getTitle(),

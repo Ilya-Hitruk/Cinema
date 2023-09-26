@@ -4,7 +4,7 @@ import com.example.cinema.dao.GenresDao;
 import com.example.cinema.exception.BadRequestException;
 import com.example.cinema.model.dto.GenresDto;
 import com.example.cinema.model.entity.GenresEntity;
-import com.example.cinema.util.converter.GenresMapper;
+import com.example.cinema.util.mapper.GenresMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -15,16 +15,23 @@ import java.util.stream.Collectors;
 @Component
 public class GenreServiceImpl implements GenreService {
     private final GenresDao genresDao;
+    private final GenresMapper genresMapper;
 
     @Autowired
-    public GenreServiceImpl(GenresDao genresDao) {
+    public GenreServiceImpl(GenresDao genresDao, GenresMapper genresMapper) {
         this.genresDao = genresDao;
+        this.genresMapper = genresMapper;
     }
 
     @Override
     public List<GenresDto> getAllGenres() {
-        return genresDao.findAll().stream()
-                .map(g -> new GenresDto(g.getId(), g.getGenre()))
+        List<GenresEntity> allGenres = genresDao.findAll();
+
+        if (allGenres.isEmpty()) {
+            throw BadRequestException.noGenresFound();
+        }
+        return allGenres.stream()
+                .map(g -> new GenresDto(g.getId(), g.getTitle()))
                 .collect(Collectors.toList());
     }
 
@@ -36,23 +43,26 @@ public class GenreServiceImpl implements GenreService {
             throw BadRequestException.genreDoesNotExists(id);
         }
 
-        return GenresMapper.entityToDto(entity);
+        return genresMapper.entityToDto(entity);
     }
 
     @Override
     public GenresDto create(GenresDto genresDto) {
-        GenresEntity entity = genresDao.save(GenresMapper.dtoToEntity(genresDto));
+        GenresEntity entity = genresDao.save(genresMapper.dtoToEntity(genresDto));
 
         if (Objects.isNull(entity)) {
-            throw BadRequestException.genreAlreadyExists(genresDto.getGenre());
+            throw BadRequestException.genreAlreadyExists(genresDto.getTitle());
         }
 
-        return GenresMapper.entityToDto(entity);
+        return genresMapper.entityToDto(entity);
     }
 
     @Override
     public void update(int id, GenresDto genresDto) {
-        boolean isUpdated = genresDao.update(GenresMapper.dtoToEntity(genresDto));
+        genresDto.setId(id);
+
+        boolean isUpdated = genresDao.update(genresMapper.dtoToEntity(genresDto));
+
         if (!isUpdated) {
             throw BadRequestException.genreDoesNotExists(id);
         }
@@ -61,6 +71,7 @@ public class GenreServiceImpl implements GenreService {
     @Override
     public void delete(int id) {
         boolean isDeleted = genresDao.delete(id);
+
         if (!isDeleted) {
             throw BadRequestException.genreDoesNotExists(id);
         }
@@ -68,6 +79,12 @@ public class GenreServiceImpl implements GenreService {
 
     @Override
     public List<String> findMoviesByGenreId(int id) {
-        return genresDao.findMoviesByGenre(id);
+        List<String> movies = genresDao.findMoviesByGenre(id);
+
+        if (movies.isEmpty()) {
+            throw BadRequestException.noMoviesBySpecifiedGenreId();
+        }
+
+        return movies;
     }
 }

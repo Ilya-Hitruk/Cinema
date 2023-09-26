@@ -1,74 +1,78 @@
 package com.example.cinema.service;
 
 import com.example.cinema.dao.MoviesDao;
+import com.example.cinema.exception.BadRequestException;
 import com.example.cinema.model.dto.MoviesDto;
 import com.example.cinema.model.entity.MoviesEntity;
-import com.example.cinema.util.converter.MoviesMapper;
+import com.example.cinema.util.mapper.MoviesMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
 public class MoviesServiceImpl implements MovieService {
-
     private final MoviesDao moviesDao;
+    private final MoviesMapper moviesMapper;
 
     @Autowired
-    public MoviesServiceImpl(MoviesDao moviesDao) {
+    public MoviesServiceImpl(MoviesDao moviesDao, MoviesMapper moviesMapper) {
         this.moviesDao = moviesDao;
+        this.moviesMapper = moviesMapper;
     }
 
     @Override
     public List<MoviesDto> getAllMovies() {
         return moviesDao.findAll()
                 .stream()
-                .map(MoviesMapper::entityToDto)
+                .map(moviesMapper::entityToDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public MoviesDto create(MoviesDto moviesDto) {
-        if (moviesDao.findById(moviesDto.getId()).isPresent()) {
-            throw new RuntimeException();
-        }
+        MoviesEntity entity = moviesDao.save(moviesMapper.dtoToEntity(moviesDto));
 
-        MoviesEntity entity = moviesDao.save(MoviesMapper.dtoToEntity(moviesDto));
-
-        return MoviesMapper.entityToDto(entity);
+        return moviesMapper.entityToDto(entity);
     }
 
     @Override
     public MoviesDto getMovieById(int id) {
-        Optional<MoviesEntity> optionalMoviesEntity = moviesDao.findById(id);
-        if (optionalMoviesEntity.isEmpty()) {
-            throw new RuntimeException();
+        MoviesEntity moviesEntity = moviesDao.findById(id);
+
+        if (Objects.isNull(moviesEntity)) {
+            throw BadRequestException.movieDoesNotExists(id);
         }
 
-        MoviesEntity entity = optionalMoviesEntity.get();
-
-        return MoviesMapper.entityToDto(entity);
+        return moviesMapper.entityToDto(moviesEntity);
     }
 
     @Override
     public List<String> getMovieGenres(int id) {
-        Optional<MoviesEntity> optionalMoviesEntity = moviesDao.findById(id);
-        if (optionalMoviesEntity.isEmpty()) {
-            throw new RuntimeException();
-        }
-        return optionalMoviesEntity.get().getGenres();
+        MoviesEntity moviesEntity = moviesDao.findById(id);// !!!!!!!!!!!!
+        return moviesEntity.getGenres();
     }
 
 
-    //    @Override
-//    public void update(int id, GenresDto genresDto) {
-//
-//    }
-//
-//    @Override
-//    public void delete(int id) {
-//
-//    }
+    @Override
+    public void update(int id, MoviesDto moviesDto) {
+        moviesDto.setId(id);
+
+        boolean isUpdated = moviesDao.update(moviesMapper.dtoToEntity(moviesDto));
+
+        if (!isUpdated) {
+            throw BadRequestException.movieDoesNotExists(moviesDto.getId());
+        }
+    }
+
+    @Override
+    public void delete(int id) {
+        boolean isDeleted = moviesDao.delete(id);
+
+        if (!isDeleted) {
+            throw BadRequestException.movieDoesNotExists(id);
+        }
+    }
 }

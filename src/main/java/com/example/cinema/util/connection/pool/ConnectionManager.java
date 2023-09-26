@@ -27,12 +27,6 @@ public final class ConnectionManager {
         loadDriver();
     }
 
-//    PASSWORD_KEY = "db.password";
-//    USERNAME_KEY = "db.username";
-//    URL_KEY = "db.url";
-//    POOL_SIZE_KEY = "db.pool.size";
-//    DEFAULT_POOL_SIZE = 10;
-
     @Autowired
     public ConnectionManager(
             @Value("${db.password}") String PASSWORD_KEY,
@@ -46,11 +40,6 @@ public final class ConnectionManager {
         this.URL_KEY = URL_KEY;
         this.POOL_SIZE_KEY = POOL_SIZE_KEY;
     }
-
-//    @PostConstruct
-//    public void init() {
-//        this.initConnectionPool();
-//    }
 
     @PostConstruct
     public void initConnectionPool() {
