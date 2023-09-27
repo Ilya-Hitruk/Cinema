@@ -21,4 +21,6 @@ public class MoviesEntity {
     private String description;
     @NonNull
     private List<String> genres;
+
+
 }

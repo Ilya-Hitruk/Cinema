@@ -7,7 +7,7 @@
 <body>
 
 <div th:each="genre : ${genres}">
-    <a th:href="@{/genres/{id}(id=${genre.getId()})}" th:text="${genre.getGenre()}">genre</a>
+    <a th:href="@{/genres/{id}(id=${genre.getId()})}" th:text="${genre.getTitle()}">genre</a>
 </div>
 
 <br>

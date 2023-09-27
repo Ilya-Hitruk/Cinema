@@ -3,15 +3,12 @@ package com.example.cinema.dao;
 import com.example.cinema.exception.DaoException;
 import com.example.cinema.model.entity.GenresEntity;
 import com.example.cinema.util.connection.pool.ConnectionManager;
-import com.example.cinema.util.connection.pool.PropertiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 @Component
 public class GenresDao {
@@ -22,7 +19,6 @@ public class GenresDao {
         this.connectionManager = connectionManager;
     }
 
-    // pass connection manager to constructor
     private static final String SAVE_SQL = """
             INSERT INTO genres(genre)
             VALUES (?)
@@ -67,45 +63,33 @@ public class GenresDao {
             WHERE mtg.genre_id = ?;
             """;
 
-
-    public boolean delete(Integer id) {
-        try (var connection = connectionManager.get();
-             var preparedStatement = connection.prepareStatement(DELETE_SQL)) {
-
-            preparedStatement.setInt(1, id);
-
-            return preparedStatement.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            throw new DaoException(e);
-        }
-    }
-
+    //  ------------------CREATE------------------
 
     public GenresEntity save(GenresEntity entity) {
         try (var connection = connectionManager.get()) {
-
             return save(entity, connection);
         } catch (SQLException e) {
             throw new DaoException(e);
         }
     }
 
+    public List<GenresEntity> save(List<GenresEntity> entities) {
+        List<GenresEntity> resultList = new ArrayList<>();
 
-    public boolean update(GenresEntity entity) {
-        try (var connection = connectionManager.get();
-             var preparedStatement = connection.prepareStatement(UPDATE_SQL)) {
+        try (var connection = connectionManager.get()) {
 
+            for (GenresEntity forSave : entities) {
+                GenresEntity saved = save(forSave, connection);
+                resultList.add(saved);
+            }
 
-            preparedStatement.setString(1, entity.getGenre());
-            preparedStatement.setInt(2, entity.getId());
-
-            return preparedStatement.executeUpdate() > 0;
+            return resultList;
         } catch (SQLException e) {
             throw new DaoException(e);
         }
     }
 
+    //  ------------------READ------------------
 
     public GenresEntity findById(int id) {
         try (var connection = connectionManager.get()) {
@@ -116,30 +100,10 @@ public class GenresDao {
         }
     }
 
-    private GenresEntity findById(int id, Connection connection) {
-        GenresEntity genresEntity = null;
-
-        try (var preparedStatement = connection.prepareStatement(FIND_BY_ID_SQL)) {
-
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            if (resultSet.next()) {
-                genresEntity = buildGenreEntity(resultSet);
-            }
-
-            return genresEntity;
-
-        } catch (SQLException e) {
-            throw new DaoException(e);
-        }
-    }
-
-
-    public GenresEntity findByGenre(String genre) {
+    public GenresEntity findByGenreTitle(String genre) {
         try (var connection = connectionManager.get()) {
 
-            return findByGenre(genre, connection);
+            return findByGenreTitle(genre, connection);
         } catch (SQLException e) {
             throw new DaoException(e);
         }
@@ -180,17 +144,46 @@ public class GenresDao {
         }
     }
 
+    //  ------------------UPDATE------------------
+
+    public boolean update(GenresEntity entity) {
+        try (var connection = connectionManager.get();
+             var preparedStatement = connection.prepareStatement(UPDATE_SQL)) {
+
+            preparedStatement.setString(1, entity.getTitle());
+            preparedStatement.setInt(2, entity.getId());
+
+            return preparedStatement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DaoException(e);
+        }
+    }
+
+    //  ------------------DELETE------------------
+
+    public boolean delete(int id) {
+        try (var connection = connectionManager.get();
+             var preparedStatement = connection.prepareStatement(DELETE_SQL)) {
+
+            preparedStatement.setInt(1, id);
+
+            return preparedStatement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new DaoException(e);
+        }
+    }
+
+    //  ------------------UTIL METHODS------------------
+
     GenresEntity save(GenresEntity entity, Connection connection) {
         try (var preparedStatement = connection.prepareStatement(SAVE_SQL, Statement.RETURN_GENERATED_KEYS)) {
 
-            preparedStatement.setString(1, entity.getGenre());
+            preparedStatement.setString(1, entity.getTitle());
             preparedStatement.executeUpdate();
             var generatedKeys = preparedStatement.getGeneratedKeys();
 
             if (generatedKeys.next()) {
                 entity.setId(generatedKeys.getInt("id"));
-            } else {
-                return null;
             }
 
             return entity;
@@ -199,12 +192,31 @@ public class GenresDao {
         }
     }
 
-    GenresEntity findByGenre(String genre, Connection connection) {
+    GenresEntity findByGenreTitle(String genre, Connection connection) {
         GenresEntity genresEntity = null;
 
         try (var preparedStatement = connection.prepareStatement(FIND_BY_GENRE_SQL)) {
             preparedStatement.setString(1, genre);
 
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                genresEntity = buildGenreEntity(resultSet);
+            }
+
+            return genresEntity;
+
+        } catch (SQLException e) {
+            throw new DaoException(e);
+        }
+    }
+
+    private GenresEntity findById(int id, Connection connection) {
+        GenresEntity genresEntity = null;
+
+        try (var preparedStatement = connection.prepareStatement(FIND_BY_ID_SQL)) {
+
+            preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {

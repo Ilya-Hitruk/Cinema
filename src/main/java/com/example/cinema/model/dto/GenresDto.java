@@ -11,5 +11,5 @@ import lombok.NonNull;
 public class GenresDto {
     private Integer id; // can be nullable
     @NonNull
-    private String genre;
+    private String title;
 }
