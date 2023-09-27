@@ -1,9 +1,10 @@
 package com.example.cinema.dao;
 
 import com.example.cinema.model.entity.GenresEntity;
-import com.example.cinema.model.entity.MoviesEntity;
 import com.example.cinema.util.connection.pool.ConnectionManager;
 import lombok.NonNull;
+import org.assertj.db.type.Source;
+import org.assertj.db.type.Table;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -13,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.db.api.Assertions.assertThat;
 
 //  AssertJ DB
 @Testcontainers
@@ -27,79 +29,129 @@ class GenresDaoTest {
             .withAccessToHost(true);
 
     static GenresDao genresDao;
-//    static MoviesDao moviesDao;
-
-    @BeforeAll
-    static void beforeAll() {
-        postgres.start();
-    }
-
-    @AfterAll
-    static void afterAll() {
-        postgres.stop();
-    }
+    static Source dataSource;
+    static Table genresTable;
 
     @BeforeEach
     void setUp() {
+        postgres.start();
+
         var connectionManager = new ConnectionManager(
                 postgres.getPassword(),
                 postgres.getUsername(),
                 postgres.getJdbcUrl(),
                 10);
         connectionManager.initConnectionPool();
+
         genresDao = new GenresDao(connectionManager);
+
+        dataSource = new Source(
+                postgres.getJdbcUrl(),
+                postgres.getUsername(),
+                postgres.getPassword()
+        );
+
+        genresTable = new Table(dataSource, "genres");
     }
 
-
-    @Test
-    void saveShouldSaveGenre() {
-        GenresEntity firstExpected = new GenresEntity("Adventure");
-        GenresEntity secondExpected = new GenresEntity("Fantasy");
-
-
-        GenresEntity firstActual = genresDao.save(firstExpected);
-        GenresEntity secondActual = genresDao.save(secondExpected);
-
-        assertThat(firstActual).isEqualTo(firstExpected);
-        assertThat(secondActual).isEqualTo(secondExpected);
-    }
-
-    @Test
-    void findMoviesByGenre() {
-
+    @AfterEach
+    void tearDown() {
+        postgres.stop();
     }
 
     @Test
-    void findAllShouldReturnAllExistingGenres() {
-        List<GenresEntity> expected = getListOfGenres();
-        genresDao.save(expected);
-        List<GenresEntity> actual = genresDao.findAll();
+    void saveShouldSaveGenreAndCheckCreatedEntityInDB() {
+        GenresEntity expectedAdventureEntity = getAdventureEntity();
+        GenresEntity expectedFantasyEntity = getFantasyEntity();
 
-        assertThat(actual).hasSize(expected.size());
-        assertThat(actual).containsAll(expected);
+        assertThat(genresTable).exists();
+
+        GenresEntity adventureActual = genresDao.save(expectedAdventureEntity);
+        GenresEntity fantasyActual = genresDao.save(expectedFantasyEntity);
+
+        assertThat(genresTable).hasNumberOfRows(2);
+
+        assertThat(genresTable).column("genre")
+                .value().isEqualTo(expectedAdventureEntity.getTitle())
+                .value().isEqualTo(expectedFantasyEntity.getTitle());
+
+        assertThat(genresTable).row(0)
+                .value().isEqualTo(adventureActual.getId())
+                .value().isEqualTo(expectedAdventureEntity.getTitle());
+
+        assertThat(genresTable).row(1)
+                .value().isEqualTo(fantasyActual.getId())
+                .value().isEqualTo(expectedFantasyEntity.getTitle());
+
+        assertThat(adventureActual).isEqualTo(expectedAdventureEntity);
+        assertThat(fantasyActual).isEqualTo(expectedFantasyEntity);
+    }
+
+//    @Test
+//    void findMoviesByGenre() {
+//
+//    }
+
+    @Test
+    void findAllShouldReturnAllExistingGenresAndCheckExistingEntitiesInDB() {
+        List<GenresEntity> expectedListOfGenres = getListOfGenres();
+
+        List<GenresEntity> savedList = genresDao.save(expectedListOfGenres);
+
+        assertThat(genresTable).hasNumberOfRows(expectedListOfGenres.size());
+
+        for (GenresEntity savedEntity: savedList) {
+            String expectedTitle = expectedListOfGenres
+                    .get(savedEntity.getId() - 1)
+                    .getTitle();
+
+            assertThat(genresTable).row(savedEntity.getId() - 1)
+                    .value().isEqualTo(savedEntity.getId())
+                    .value().isEqualTo(expectedTitle);
+        }
+
+        List<GenresEntity> actualList = genresDao.findAll();
+
+        assertThat(actualList).hasSize(expectedListOfGenres.size());
+        assertThat(actualList).containsAll(expectedListOfGenres);
     }
 
     @Test
-    void findByIdShouldReturnGenre() {
-        GenresEntity saved = genresDao.save(new GenresEntity("Adventure"));
+    void findByIdShouldReturnGenreAndCheckExistingEntityInDB() {
+        GenresEntity expectedEntity = getAdventureEntity();
 
-        GenresEntity actual = genresDao.findById(saved.getId());
+        int idOfSavedEntity = genresDao.save(expectedEntity).getId();
 
-        assertThat(actual).isEqualTo(saved);
+        assertThat(genresTable).row(0)
+                .value().isEqualTo(idOfSavedEntity)
+                .value().isEqualTo(expectedEntity.getTitle());
+
+        GenresEntity actual = genresDao.findById(idOfSavedEntity);
+
+        assertThat(actual).isEqualTo(expectedEntity);
     }
 
     @Test
-    void findByGenreTitleShouldReturnGenre() {
-        GenresEntity saved = genresDao.save(new GenresEntity("Adventure"));
+    void findByGenreTitleShouldReturnGenreAndCheckExistingEntityInDB() {
+        GenresEntity expectedEntity = getAdventureEntity();
 
-        GenresEntity actual = genresDao.findByGenreTitle(saved.getTitle());
+        int idOfSavedEntity = genresDao.save(expectedEntity).getId();
 
-        assertThat(actual).isEqualTo(saved);
+        assertThat(genresTable).row(0)
+                .value().isEqualTo(idOfSavedEntity)
+                .value().isEqualTo(expectedEntity.getTitle());
+
+        GenresEntity actual = genresDao.findByGenreTitle(expectedEntity.getTitle());
+
+        assertThat(actual).isEqualTo(expectedEntity);
     }
 
     @Test
-    void findByIdShouldReturnNullCauseNoSuchGenreFoundBySpecifiedId() {
+    void findByIdShouldReturnNullCauseNoSuchIdFoundAndCheckThatSpecifiedEntityIsNotExistInDB() {
         int fakeId = 0;
+
+        assertThat(genresTable).exists();
+        assertThat(genresTable).hasNumberOfRows(0);
 
         GenresEntity actual = genresDao.findById(fakeId);
 
@@ -107,8 +159,11 @@ class GenresDaoTest {
     }
 
     @Test
-    void findByGenreTitleShouldReturnNullCauseNoSuchTitleFound() {
+    void findByGenreTitleShouldReturnNullCauseNoSuchTitleFoundAndCheckThatSpecifiedEntityIsNotExistInDB() {
         String fakeTitle = "fake";
+
+        assertThat(genresTable).exists();
+        assertThat(genresTable).hasNumberOfRows(0);
 
         GenresEntity actual = genresDao.findByGenreTitle(fakeTitle);
 
@@ -116,49 +171,75 @@ class GenresDaoTest {
     }
 
     @Test
-    void updateShouldUpdateGenreAndReturnTrue() {
-        GenresEntity saved = genresDao.save(new GenresEntity("Adventure"));
-        GenresEntity forUpdate = new GenresEntity(saved.getId(), "Fantasy");
+    void updateShouldUpdateGenreReturnTrueAndCheckUpdatedEntityInDB() {
+        String updatedTitle = "Fantasy";
 
-        boolean actual = genresDao.update(forUpdate);
-        String updatedTitle = genresDao.findById(forUpdate.getId()).getTitle();
+        GenresEntity saved = genresDao.save(getAdventureEntity());
 
-        Assertions.assertTrue(actual);
-        assertThat(forUpdate.getTitle()).isEqualTo(updatedTitle);
+        GenresEntity expectedUpdatedEntity = new GenresEntity(saved.getId(), updatedTitle);
+
+        boolean actualIsUpdated = genresDao.update(expectedUpdatedEntity);
+
+        assertThat(genresTable).row(0)
+                .value().isEqualTo(saved.getId())
+                .value().isEqualTo(updatedTitle);
+
+        String actualTitle = genresDao.findById(expectedUpdatedEntity.getId()).getTitle();
+
+        Assertions.assertTrue(actualIsUpdated);
+        assertThat(actualTitle).isEqualTo(updatedTitle);
     }
 
     @Test
-    void updateShouldNotUpdateGenreAndReturnFalseCauseNoSuchEntityFound() {
+    void updateShouldNotUpdateGenreReturnFalseCauseNoSuchIdFoundAndCheckThatSpecifiedEntityIsNotExistInDB() {
         GenresEntity fakeEntity = new GenresEntity(0, "fake");
 
-        boolean actual = genresDao.update(fakeEntity);
+        assertThat(genresTable).exists();
+        assertThat(genresTable).hasNumberOfRows(0);
+
+        boolean actualIsUpdated = genresDao.update(fakeEntity);
         GenresEntity shouldNotExist = genresDao.findById(fakeEntity.getId());
 
-        Assertions.assertFalse(actual);
+        Assertions.assertFalse(actualIsUpdated);
         assertThat(shouldNotExist).isNull();
     }
 
     @Test
-    void deleteShouldDeleteGenre() {
-        GenresEntity saved = genresDao.save(new GenresEntity("Adventure"));
+    void deleteShouldDeleteGenreReturnTrueAndCheckDeletedEntityInDB() {
+        GenresEntity saved = genresDao.save(getAdventureEntity());
 
-        boolean actual = genresDao.delete(saved.getId());
+        boolean actualIsDeleted = genresDao.delete(saved.getId());
+
+        assertThat(genresTable).hasNumberOfRows(0);
 
         GenresEntity shouldNotExist = genresDao.findById(saved.getId());
 
-        Assertions.assertTrue(actual);
+        Assertions.assertTrue(actualIsDeleted);
         assertThat(shouldNotExist).isNull();
     }
 
     @Test
-    void deleteShouldReturnFalseCauseNoSuchIdFound() {
+    void deleteShouldReturnFalseCauseNoSuchIdFoundAndCheckThatSpecifiedEntityIsNotExistInDB() {
         int fakeId = 0;
+
+        assertThat(genresTable).exists();
+        assertThat(genresTable).hasNumberOfRows(0);
 
         boolean actual = genresDao.delete(fakeId);
         GenresEntity shouldNotExist = genresDao.findById(fakeId);
 
         Assertions.assertFalse(actual);
         assertThat(shouldNotExist).isNull();
+    }
+
+    @NonNull
+    private static GenresEntity getAdventureEntity() {
+        return new GenresEntity("Adventure");
+    }
+
+    @NonNull
+    private static GenresEntity getFantasyEntity() {
+        return new GenresEntity("Fantasy");
     }
 
     @NonNull

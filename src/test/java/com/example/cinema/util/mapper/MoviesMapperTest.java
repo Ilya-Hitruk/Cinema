@@ -1,8 +1,6 @@
 package com.example.cinema.util.mapper;
 
-import com.example.cinema.model.dto.GenresDto;
 import com.example.cinema.model.dto.MoviesDto;
-import com.example.cinema.model.entity.GenresEntity;
 import com.example.cinema.model.entity.MoviesEntity;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +8,6 @@ import java.time.LocalDate;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 class MoviesMapperTest {
 

@@ -1,6 +1,5 @@
 package com.example.cinema.service;
 
-import com.example.cinema.model.dto.GenresDto;
 import com.example.cinema.model.dto.MoviesDto;
 
 import java.util.List;
